@@ -8,7 +8,6 @@ DYNAMODB_TABLE = os.environ['DYNAMODB_TABLE']
 
 def handler(event, context):
     table = dynamodb.Table(DYNAMODB_TABLE)
-    print(event['Records']);
 
     for record in event['Records']:
         message = json.loads(record['body'])
