@@ -1,0 +1,54 @@
+service: sentiment-analysis-sqs-lambda
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: ${self:custom.region}
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  bucketName: review-data-store-20241218
+  region: eu-central-1
+
+functions:
+  processFile:
+    handler: handlers/process_file.handler
+    timeout: 60
+    environment:
+          QUEUE_URL: !Ref FeedbackQueue
+    events:
+      - s3:
+          bucket: ${self:custom.bucketName}
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .json
+    role: !GetAtt ProcessFileRole.Arn
+
+  extractAndProcessFeedback:
+    handler: handlers/process_feedback.handler
+    timeout: 30
+    environment:
+      DYNAMODB_TABLE: !Ref SentimentTable
+    events:
+      - sqs:
+          arn: arn:aws:sqs:${self:custom.region}:${aws:accountId}:feedbackQueue
+          batchSize: 5
+    role: !GetAtt ExtractFeedbackRole.Arn
+
+resources:
+  - ${file(resources/iam-roles.yml)}
+  - ${file(resources/dynamodb.yml)}
+  - ${file(resources/sqs.yml)}
+
+package:
+  individually: true
+  exclude:
+    - "*.json"
+    - "node_modules/**"
+    - ".serverless/**"
+    - ".git/**"
+    - "env/**"

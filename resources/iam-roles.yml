@@ -1,0 +1,85 @@
+Resources:
+    ProcessFileRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: ["lambda.amazonaws.com"]
+              Action: ["sts:AssumeRole"]
+        Policies:
+          - PolicyName: ProcessFileS3Policy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "s3:GetObject"
+                    - "s3:ListBucket"
+                  Resource: "arn:aws:s3:::${self:custom.bucketName}/*"
+          - PolicyName: ProcessFileCloudWatchPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "logs:CreateLogStream"
+                    - "logs:PutLogEvents"
+                  Resource: "*"
+          - PolicyName: ProcessFileSQSPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "sqs:SendMessage"
+                  Resource: !GetAtt FeedbackQueue.Arn
+
+    ExtractFeedbackRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: ["lambda.amazonaws.com"]
+              Action: ["sts:AssumeRole"]
+        Policies:
+          - PolicyName: ExtractFeedbackSQSPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "sqs:ReceiveMessage"
+                    - "sqs:DeleteMessage"
+                    - "sqs:GetQueueAttributes"
+                  Resource: !GetAtt FeedbackQueue.Arn
+          - PolicyName: ExtractFeedbackDynamoDBPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "dynamodb:PutItem"
+                  Resource: !GetAtt SentimentTable.Arn
+          - PolicyName: ExtractFeedbackCloudWatchPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "logs:CreateLogStream"
+                    - "logs:PutLogEvents"
+                  Resource: "*"
+          - PolicyName: ExtractFeedbackComprehendPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "comprehend:DetectSentiment"
+                  Resource: "*"

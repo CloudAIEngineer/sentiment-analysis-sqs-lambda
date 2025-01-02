@@ -1,0 +1,5 @@
+Resources:
+    FeedbackQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: feedbackQueue

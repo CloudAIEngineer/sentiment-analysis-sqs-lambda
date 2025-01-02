@@ -1,0 +1,14 @@
+Resources:
+  SentimentTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: SentimentAnalysisResults
+      AttributeDefinitions:
+        - AttributeName: feedbackId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: feedbackId
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
