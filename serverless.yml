@@ -11,7 +11,8 @@ plugins:
   - serverless-python-requirements
 
 custom:
-  bucketName: review-data-store-20241218
+  feedbackBucketName: review-data-store-20241218
+  exportBucketName: feedback-exports-20250103
   region: eu-central-1
 
 functions:
@@ -19,10 +20,10 @@ functions:
     handler: handlers/process_file.handler
     timeout: 60
     environment:
-          QUEUE_URL: !Ref FeedbackQueue
+      QUEUE_URL: !Ref FeedbackQueue
     events:
       - s3:
-          bucket: ${self:custom.bucketName}
+          bucket: ${self:custom.feedbackBucketName}
           event: s3:ObjectCreated:*
           rules:
             - suffix: .json
@@ -39,10 +40,23 @@ functions:
           batchSize: 5
     role: !GetAtt ExtractFeedbackRole.Arn
 
+  exportFeedbackToCSV:
+    handler: handlers/export_feedback.handler
+    timeout: 60
+    events:
+      - schedule:
+          rate: cron(0 0 * * ? *) # Every day at midnight UTC
+    environment:
+      DYNAMODB_TABLE: !Ref SentimentTable
+      DYNAMODB_INDEX: ExportedIndex
+      BUCKET_NAME: ${self:custom.exportBucketName}
+    role: !GetAtt ExportFeedbackRole.Arn
+
 resources:
   - ${file(resources/iam-roles.yml)}
   - ${file(resources/dynamodb.yml)}
   - ${file(resources/sqs.yml)}
+  - ${file(resources/s3.yml)}
 
 package:
   individually: true

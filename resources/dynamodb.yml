@@ -6,9 +6,21 @@ Resources:
       AttributeDefinitions:
         - AttributeName: feedbackId
           AttributeType: S
+        - AttributeName: exported
+          AttributeType: S
       KeySchema:
         - AttributeName: feedbackId
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: ExportedIndex
+          KeySchema:
+            - AttributeName: exported
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1

@@ -30,7 +30,8 @@ def handler(event, context):
                 'feedbackText': message['feedbackText'],
                 'feedbackCategory': message['feedbackCategory'],
                 'timestamp': message['timestamp'],
-                'sentiment': sentiment
+                'sentiment': sentiment,
+                'exported': "False"
             }
         )
     
