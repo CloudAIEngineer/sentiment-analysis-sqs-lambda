@@ -27,8 +27,14 @@ def handler(event, context):
         print("No new feedbacks to export.")
         return
     
+    for item in items:
+        timestamp = item['timestamp']
+        dt_object = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
+        item['month'] = dt_object.month
+        
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     file_name = f'feedback_export_{timestamp}.csv'
+    
     with open(f'/tmp/{file_name}', mode='w', newline='', encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=items[0].keys())
         writer.writeheader()
