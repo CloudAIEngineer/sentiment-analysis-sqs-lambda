@@ -15,7 +15,11 @@ def handler(event, context):
     
     response = table.query(
         IndexName=INDEX_NAME,
-        KeyConditionExpression=boto3.dynamodb.conditions.Key('exported').eq('False')
+        KeyConditionExpression=boto3.dynamodb.conditions.Key('exported').eq('False'),
+        ProjectionExpression='#ts, feedbackId, feedbackCategory, sentiment',
+        ExpressionAttributeNames={
+            '#ts': 'timestamp'
+        }
     )
     
     items = response['Items']
