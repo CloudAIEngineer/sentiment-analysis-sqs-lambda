@@ -2,6 +2,11 @@
 
 This project provides a serverless sentiment analysis pipeline using AWS Lambda, S3, and DynamoDB. It processes customer review data uploaded to an S3 bucket, performs sentiment analysis, and stores the results in DynamoDB.
 
+## Table of Contents
+
+1. [Setup Athena and S3 for Data Export](docs/ATHENA_SETUP_README.md)
+2. [QuickSight Visualization Setup](docs/QUICKSIGHT_SETUP_README.md)
+
 ## Features:
 - **Sentiment analysis** for customer reviews.
 - **S3 trigger** automatically processes reviews as they are uploaded to the S3 bucket.
@@ -42,6 +47,7 @@ This project provides a serverless sentiment analysis pipeline using AWS Lambda,
 ### Lambda Functions:
 - **ProcessFile**: This function extracts feedback from the uploaded file and sends it to SQS for further processing.
 - **ProcessFeedback**: This function processes feedback from SQS and performs sentiment analysis using AWS Comprehend and stores the sentiment result in DynamoDB.
+- **ExportFeedback**: Exports unprocessed feedback from DynamoDB to a CSV file, adds a `month` field, uploads it to S3, and marks entries as exported.  
 
 ## Resources:
 - **DynamoDB Table**: Stores review data and sentiment analysis results.
