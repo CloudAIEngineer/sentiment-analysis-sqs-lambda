@@ -20,8 +20,14 @@ This guide provides concise steps to configure Amazon Athena to query your S3 bu
               "Principal": {
                   "Service": "athena.amazonaws.com"
               },
-              "Action": "s3:GetObject",
-              "Resource": "arn:aws:s3:::your-bucket-name/*"
+              "Action": [
+                  "s3:ListBucket",
+                  "s3:GetObject"
+              ],
+              "Resource": [
+                  "arn:aws:s3:::feedback-exports-20250103",
+                  "arn:aws:s3:::feedback-exports-20250103/*"
+              ]
           }
       ]
   }
