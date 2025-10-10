@@ -1,26 +1,21 @@
 Resources:
-  SentimentTable:
+  FeedbackSentimentTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: SentimentAnalysisResults
+      TableName: FeedbackSentiment
       AttributeDefinitions:
-        - AttributeName: feedbackId
+        - AttributeName: processingDate
           AttributeType: S
-        - AttributeName: exported
+        - AttributeName: feedbackId
           AttributeType: S
       KeySchema:
-        - AttributeName: feedbackId
+        - AttributeName: processingDate
           KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: ExportedIndex
-          KeySchema:
-            - AttributeName: exported
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-          ProvisionedThroughput:
-            ReadCapacityUnits: 1
-            WriteCapacityUnits: 1
+        - AttributeName: feedbackId
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
       ProvisionedThroughput:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1

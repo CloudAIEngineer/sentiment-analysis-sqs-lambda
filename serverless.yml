@@ -1,62 +1,61 @@
 service: sentiment-analysis-sqs-lambda
-
 frameworkVersion: "3"
 
 provider:
   name: aws
   runtime: python3.9
   region: ${self:custom.region}
+  timeout: 60
 
 plugins:
   - serverless-python-requirements
 
 custom:
-  feedbackBucketName: review-data-store-20241218
-  exportBucketName: feedback-exports-20250103
   region: eu-central-1
+  feedbackInputBucketName: feedback-input-20251009
+  feedbackExportBucketName: feedback-exports-20251009
 
 functions:
   processFile:
     handler: handlers/process_file.handler
     timeout: 60
+    role: !GetAtt ProcessFileRole.Arn
     environment:
       QUEUE_URL: !Ref FeedbackQueue
     events:
       - s3:
-          bucket: ${self:custom.feedbackBucketName}
+          bucket: ${self:custom.feedbackInputBucketName}
           event: s3:ObjectCreated:*
           rules:
             - suffix: .json
-    role: !GetAtt ProcessFileRole.Arn
 
-  extractAndProcessFeedback:
+  processFeedback:
     handler: handlers/process_feedback.handler
-    timeout: 30
+    timeout: 120
+    role: !GetAtt ProcessFeedbackRole.Arn
     environment:
-      DYNAMODB_TABLE: !Ref SentimentTable
+      DYNAMODB_TABLE: !Ref FeedbackSentimentTable
     events:
       - sqs:
-          arn: arn:aws:sqs:${self:custom.region}:${aws:accountId}:feedbackQueue
+          arn: !GetAtt FeedbackQueue.Arn
           batchSize: 5
-    role: !GetAtt ExtractFeedbackRole.Arn
 
-  exportFeedbackToCSV:
+  exportFeedback:
     handler: handlers/export_feedback.handler
     timeout: 60
+    role: !GetAtt ExportFeedbackRole.Arn
+    environment:
+      DYNAMODB_TABLE: !Ref FeedbackSentimentTable
+      EXPORT_BUCKET: ${self:custom.feedbackExportBucketName}
     events:
       - schedule:
-          rate: cron(0 0 * * ? *) # Every day at midnight UTC
-    environment:
-      DYNAMODB_TABLE: !Ref SentimentTable
-      DYNAMODB_INDEX: ExportedIndex
-      BUCKET_NAME: ${self:custom.exportBucketName}
-    role: !GetAtt ExportFeedbackRole.Arn
+          rate: cron(0 * * * ? *)
 
 resources:
-  - ${file(resources/iam-roles.yml)}
   - ${file(resources/dynamodb.yml)}
   - ${file(resources/sqs.yml)}
   - ${file(resources/s3.yml)}
+  - ${file(resources/iam-roles.yml)}
 
 package:
   individually: true
@@ -65,4 +64,3 @@ package:
     - "node_modules/**"
     - ".serverless/**"
     - ".git/**"
-    - "env/**"

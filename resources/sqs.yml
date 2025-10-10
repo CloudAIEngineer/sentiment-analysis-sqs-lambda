@@ -1,5 +1,16 @@
 Resources:
-    FeedbackQueue:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: feedbackQueue
+  FeedbackQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: feedbackQueue
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt FeedbackDLQ.Arn
+        maxReceiveCount: 3
+
+  FeedbackDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: feedbackQueueDLQ
+      MessageRetentionPeriod: 1209600 # 14 дней для диагностики
