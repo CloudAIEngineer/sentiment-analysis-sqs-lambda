@@ -1,5 +1,11 @@
 Resources:
-  ExportBucket:
+  FeedbackExportBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: ${self:custom.exportBucketName}
+      BucketName: ${self:custom.feedbackExportBucketName}
+      LifecycleConfiguration:
+        Rules:
+          - Id: "ExpireOldExports"
+            Prefix: ""
+            Status: Enabled
+            ExpirationInDays: 90

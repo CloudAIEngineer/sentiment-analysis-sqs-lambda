@@ -7,36 +7,31 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: ["lambda.amazonaws.com"]
-            Action: ["sts:AssumeRole"]
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
-        - PolicyName: ProcessFileS3Policy
+        - PolicyName: ProcessFileAccess
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
-                  - "s3:GetObject"
-                  - "s3:ListBucket"
-                Resource: "arn:aws:s3:::${self:custom.feedbackBucketName}/*"
-        - PolicyName: ProcessFileCloudWatchPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:aws:s3:::${self:custom.feedbackInputBucketName}"
+                  - !Sub "arn:aws:s3:::${self:custom.feedbackInputBucketName}/*"
               - Effect: Allow
                 Action:
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                Resource: "*"
-        - PolicyName: ProcessFileSQSPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "sqs:SendMessage"
+                  - sqs:SendMessage
                 Resource: !GetAtt FeedbackQueue.Arn
-  ExtractFeedbackRole:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  ProcessFeedbackRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -44,44 +39,34 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: ["lambda.amazonaws.com"]
-            Action: ["sts:AssumeRole"]
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
-        - PolicyName: ExtractFeedbackSQSPolicy
+        - PolicyName: FeedbackAnalysisAccess
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
-                  - "sqs:ReceiveMessage"
-                  - "sqs:DeleteMessage"
-                  - "sqs:GetQueueAttributes"
+                  - dynamodb:PutItem
+                Resource: !GetAtt FeedbackSentimentTable.Arn
+              - Effect: Allow
+                Action:
+                  - comprehend:DetectSentiment
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
                 Resource: !GetAtt FeedbackQueue.Arn
-        - PolicyName: ExtractFeedbackDynamoDBPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
               - Effect: Allow
                 Action:
-                  - "dynamodb:PutItem"
-                Resource: !GetAtt SentimentTable.Arn
-        - PolicyName: ExtractFeedbackCloudWatchPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
                 Resource: "*"
-        - PolicyName: ExtractFeedbackComprehendPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "comprehend:DetectSentiment"
-                Resource: "*"
+
   ExportFeedbackRole:
     Type: AWS::IAM::Role
     Properties:
@@ -93,40 +78,22 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: ExportFeedbackTableUpdatePolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:UpdateItem
-                Resource: !GetAtt SentimentTable.Arn
-        - PolicyName: ExportFeedbackGSIQueryPolicy
+        - PolicyName: ExportFeedbackAccess
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
                   - dynamodb:Query
-                Resource:
-                  - !GetAtt SentimentTable.Arn
-                  - !Sub "${SentimentTable.Arn}/index/ExportedIndex"
-        - PolicyName: ExportFeedbackS3Policy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
+                  - dynamodb:UpdateItem
+                Resource: !GetAtt FeedbackSentimentTable.Arn
               - Effect: Allow
                 Action:
                   - s3:PutObject
                 Resource:
-                  - arn:aws:s3:::${self:custom.exportBucketName}/*
-        - PolicyName: ExportFeedbackLogsPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
+                  - !Sub "arn:aws:s3:::${self:custom.feedbackExportBucketName}/*"
               - Effect: Allow
                 Action:
-                  - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "*"
