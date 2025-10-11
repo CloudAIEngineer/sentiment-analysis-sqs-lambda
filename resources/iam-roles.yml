@@ -56,6 +56,13 @@ Resources:
                 Resource: "*"
               - Effect: Allow
                 Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !GetAtt FeedbackQueue.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "*"

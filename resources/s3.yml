@@ -1,9 +1,4 @@
 Resources:
-  FeedbackInputBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: ${self:custom.feedbackInputBucketName}
-
   FeedbackExportBucket:
     Type: AWS::S3::Bucket
     Properties:
