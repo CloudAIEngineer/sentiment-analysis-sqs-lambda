@@ -1,0 +1,55 @@
+@startuml
+title Feedback Processing Pipeline (AWS Serverless)
+
+actor "User" as user
+
+box "S3 Input Bucket" #LightYellow
+    participant "feedback-input" as s3Input <<S3>>
+end box
+
+box "Ingestion Layer" #AntiqueWhite
+    participant "processFile" as processFile <<Lambda>>
+    queue "FeedbackQueue" as feedbackQueue <<SQS>>
+    queue "FeedbackDLQ" as feedbackDLQ <<SQS-DLQ>>
+end box
+
+box "Processing Layer" #LightCyan
+    participant "processFeedback" as processFeedback <<Lambda>>
+    database "FeedbackSentiment" as feedbackTable <<DynamoDB>>
+    participant "Comprehend" as comprehend <<AWS Comprehend>>
+end box
+
+box "Export Layer" #LightBlue
+    participant "exportFeedback" as exportFeedback <<Lambda>>
+    participant "feedback-exports" as s3Export <<S3>>
+end box
+
+== Upload File ==
+user -> s3Input: upload feedbacks.json
+activate s3Input
+s3Input -> processFile: S3:ObjectCreated event
+deactivate s3Input
+activate processFile
+processFile -> feedbackQueue: send messages
+deactivate processFile
+
+== Process Feedback ==
+feedbackQueue -> processFeedback: SQS event batch
+activate processFeedback
+processFeedback -> comprehend: detect sentiment
+activate comprehend
+comprehend --> processFeedback: sentiment result
+deactivate comprehend
+processFeedback -> feedbackTable: put item (feedbackId, sentiment, etc.)
+deactivate processFeedback
+
+== Export Feedback ==
+exportFeedback -> feedbackTable: query unexported items
+activate exportFeedback
+feedbackTable --> exportFeedback: items
+exportFeedback -> s3Export: upload CSV (grouped by date folders)
+s3Export --> exportFeedback
+exportFeedback -> feedbackTable: update items (set exported=True, ttl)
+deactivate exportFeedback
+
+@enduml

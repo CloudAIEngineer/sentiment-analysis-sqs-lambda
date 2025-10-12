@@ -1,61 +1,62 @@
-# Sentiment Analysis S3 + Lambda
+# Sentiment Analysis S3 + Lambda + SQS + DynamoDB
 
-This project provides a serverless sentiment analysis pipeline using AWS Lambda, S3, and DynamoDB. It processes customer review data uploaded to an S3 bucket, performs sentiment analysis, and stores the results in DynamoDB.
+This project implements a **serverless sentiment analysis pipeline** on AWS using **S3**, **SQS**, **Lambda**, **DynamoDB**, and **Comprehend**.  
+It processes customer feedback files uploaded to S3, analyzes the sentiment of each feedback message, stores results in DynamoDB, and periodically exports processed data to another S3 bucket.
 
-## Table of Contents
+---
 
-1. [Setup Athena and S3 for Data Export](docs/ATHENA_SETUP_README.md)
-2. [QuickSight Visualization Setup](docs/QUICKSIGHT_SETUP_README.md)
+## 📂 Table of Contents
 
-## Features:
-- **Sentiment analysis** for customer reviews.
-- **S3 trigger** automatically processes reviews as they are uploaded to the S3 bucket.
-- **Lambda functions** handle review extraction, sentiment analysis, and result storage.
-- **DynamoDB** stores sentiment analysis results for each review.
+1. [Architecture Overview](#architecture-overview)
+2. [Workflow](#workflow)
+3. [Setup](#setup)
+4. [Resources](#resources)
+5. [Samples](#samples)
+6. [License](#license)
 
-## Architecture Overview:
-- **ProcessFile**: A Lambda function that extracts feedback data from S3 when a file is uploaded.
-- **ProcessFeedback**: A Lambda function that performs sentiment analysis on the extracted feedback.
-- **S3 Bucket**: Used to store feedback files that trigger Lambda functions.
-- **SQS Queue**: Holds messages for further processing by the AnalyzeSentiment Lambda.
+---
 
-## Workflow:
-1. **File Upload to S3**: A file containing customer feedback is uploaded to an S3 bucket. This triggers the `ProcessFile` Lambda.
-2. **Feedback processing**: The `ProcessFeedback` Lambda function is triggered by messages in the SQS queue, which contains feedback from the uploaded file. The sentiment analysis results are stored in DynamoDB along with the feedback for further analysis.
+## 🧩 Architecture Overview
 
-## Setup
+**Components:**
 
-### Prerequisites:
-- **Serverless Framework** installed.
-- AWS CLI configured with appropriate credentials.
-- S3 bucket created for review uploads (specified in the Serverless configuration, please replace my bucket name).
+- **S3 (feedback-input)** – stores uploaded `.json` files containing feedback data.
+- **Lambda `processFile`** – triggered by S3 upload, reads the file, and sends each feedback entry as a message to **SQS**.
+- **SQS (feedbackQueue)** – acts as a buffer for asynchronous processing.
+- **Lambda `processFeedback`** – triggered by SQS, performs sentiment analysis using **AWS Comprehend**, and stores results in **DynamoDB**.
+- **DynamoDB (FeedbackSentiment)** – stores feedback text, sentiment, timestamp, and exported status.
+- **Lambda `exportFeedback`** – runs hourly (via cron), exports unexported items to **S3 (feedback-exports)** as CSV, and marks them as exported.
 
-### Deploy:
-1. Clone this repository.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Deploy the service to AWS:
-   ```bash
-   serverless deploy
-   ```
+---
 
-### S3 Bucket:
-- The S3 bucket should be configured to trigger the Lambda function (`ProcessFile`) on object creation (i.e., when a new review file is uploaded).
+## ⚙️ Workflow
 
-### Lambda Functions:
-- **ProcessFile**: This function extracts feedback from the uploaded file and sends it to SQS for further processing.
-- **ProcessFeedback**: This function processes feedback from SQS and performs sentiment analysis using AWS Comprehend and stores the sentiment result in DynamoDB.
-- **ExportFeedback**: Exports unprocessed feedback from DynamoDB to a CSV file, adds a `month` field, uploads it to S3, and marks entries as exported.  
+1. **Upload to S3**  
+   A `.json` file with an array of feedbacks is uploaded to `feedback-input`.
 
-## Resources:
-- **DynamoDB Table**: Stores review data and sentiment analysis results.
-- **IAM Roles**: Permissions for Lambda and S3 execution.
-- **SQS Queue**: Queue to hold feedback messages for sentiment analysis processing.
+2. **File Processing (processFile Lambda)**  
+   The file is read and each feedback entry is sent to `feedbackQueue` (SQS).
 
-## Samples:
-In the **reviews** folder, you can find a set of sample files to simulate the upload process. Each file contains up to **10 feedbacks**. You can upload these files to the S3 bucket one by one to test the project.
+3. **Feedback Analysis (processFeedback Lambda)**  
+   Each SQS message triggers sentiment detection via AWS Comprehend.  
+   Results are written to DynamoDB with `exported=False`.
 
-## License
-This project is licensed under the MIT License.
+4. **Data Export (exportFeedback Lambda)**  
+   Once per hour, unexported items are fetched, written to a CSV file, uploaded to `feedback-exports` in S3, and marked as `exported=True` with a 30-day TTL.
+
+---
+
+## 🚀 Setup
+
+### Prerequisites
+
+- **Serverless Framework** installed (`npm install -g serverless`)
+- **AWS CLI** configured with appropriate credentials
+- Node.js 18+ and Python 3.9+ available locally
+
+### Deploy
+
+```bash
+npm install
+serverless deploy
+```
