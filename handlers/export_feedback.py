@@ -14,7 +14,6 @@ def handler(event, context):
     table = dynamodb.Table(TABLE_NAME)
     today = datetime.utcnow().strftime("%Y-%m-%d")
 
-    # Получаем все неэкспортированные записи за сегодня
     response = table.query(
         KeyConditionExpression=Key('processingDate').eq(today),
         FilterExpression=Attr('exported').eq("False")
@@ -29,7 +28,6 @@ def handler(event, context):
     file_name = f"feedback_export_{timestamp}.csv"
     local_path = f"/tmp/{file_name}"
 
-    # Создаём CSV без поля exported
     with open(local_path, "w", newline="", encoding="utf-8") as csvfile:
         fieldnames = ["processingDate", "feedbackText", "sentiment", "timestamp", "feedbackId"]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -44,13 +42,11 @@ def handler(event, context):
                 "feedbackId": item.get("feedbackId", "")
             })
 
-    # Загружаем CSV в S3
     now = datetime.utcnow()
     key = f"year={now.year}/month={now.month:02d}/day={now.day:02d}/{file_name}"
     s3.upload_file(local_path, EXPORT_BUCKET, key)
     print(f"File uploaded to s3://{EXPORT_BUCKET}/{key}")
 
-    # Обновляем записи в DynamoDB
     ttl_value = int((datetime.utcnow() + timedelta(days=30)).timestamp())
 
     for item in items:
